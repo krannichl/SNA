@@ -1,0 +1,836 @@
+---
+title: "Skript_Arbeiten mit iGraph"
+output: html_document
+date: "2022-10-18"
+---
+
+########## Arbeiten mit dem Package iGraph ##########
+
+```{r}
+
+install.packages("igraph")
+library(igraph)
+
+install.packages("igraphdata")
+library(igraphdata)
+data() # Zeigt alle aktuell über R verfügbaren und bisher geladenen Datensätze an
+data("karate") # Mit diesem Datensatz wollen wir heute u. a. arbeiten
+
+View(karate) # 34 Personen (da 34 Zeilen), denen jeweils ihre Beziehungen zu anderen Personen zugeordnet sind
+
+karate[1] # Was macht dieser Befehl?
+
+# --> Zeigt die Beziehungsdaten zum Vertex in der ersten Zeile des Datensatzes (Mr Hi) an, z. B. Mr Hi hat vier Kontakte mit Actor 2 (--> gewichtetes Netzwerk)
+# R fängt die Zählung bei 1 an
+
+plot(karate) # Für einen ersten Einblick in die Netzwerkstrukturen
+
+```
+
+
+```{r}
+
+### AUFGABE ###
+# Zu welchem Datentypus gehören die karate-Daten?
+
+class(karate)
+
+```
+
+
+```{r}
+
+# Anlegen eines iGraph-Objektes:
+
+Kontakt1 <- c("Lisa", "Michael", "Janine", "Tina", "Lisa", "Michael", "Michael", "Tina", "Lisa", "Tom")
+Kontakt2 <- c("Melanie", "Chris", "Chris", "Mareike", "Mareike", "Mareike", "Melanie", "Melanie", "Chris", "Mareike")
+
+Freunde <- cbind(Kontakt1, Kontakt2) # Was haben wir hier gemacht?
+
+# --> Erstellen einer Matrix aus den beiden Vektoren
+
+class(Freunde)
+
+Freunde_Net <- graph.edgelist(Freunde, directed = FALSE)
+class(Freunde_Net)
+# Konvertiert eine Matrix in ein iGraph-Objekt 
+# Wenn es ein gerichtetes Netzwerk ist, dann TRUE angeben
+
+# Das Konvertieren eines Dataframes in ein iGraph-Objekt läuft über die Funktion graph_from_data_frame()
+# iGraph.Object <- graph_from_data_frame(dataframe.data, directed = TRUE)
+
+Freunde_Net # Zeigt die Gerichtetheit (UN = ungerichtetes Netzwerk), die Anzahl der Vertices (8), der Edges (10) und die konkreten Beziehungen zwischen den Vertices sowie Informationen über die Bezeichnung der Variablen im Datensatz (in diesem Fall das Vertex-Attribut name) an
+
+is.directed(Freunde_Net) # Gibt Antwort darüber, ob es sich um ein gerichtetes Netzwerk handelt
+
+plot(Freunde_Net) # Das schauen wir uns gleich mal an
+
+```
+
+
+```{r}
+
+# Zentrale Informationen über unser Netzwerk:
+
+karate
+
+V(karate) # Zeigt alle Knoten bzw. Vertices (daher V) an
+gorder(karate) # Gibt die Anzahl aller Vertices im Netzwerk an
+
+E(karate) # Zeigt alle Kanten bzw. Edges (daher E) an, die zwischen den Vertices bestehen
+gsize(karate) # Gibt die Anzahl aller Edges im Netzwerk an
+
+```
+
+
+### Manipulation von Netzwerkdaten ###
+
+```{r}
+
+# Nun geben wir unseren Vertices und Edges zusätzliche Attribute
+
+# Beginnen wir mit einem neuen Vertex-Attribut:
+
+V(Freunde_Net) # Für die Zuweisung der Attribute orientieren wir uns an der Reihenfolge, die bereits im Datensatz existiert
+Geschlecht <- c("weiblich", "weiblich", "männlich", "männlich", "weiblich", "weiblich", "weiblich", "männlich") # Zunächst legen wir dafür einen neuen Vektor an
+Freunde_Net <- set_vertex_attr(Freunde_Net, "gender", value = Geschlecht) # Anschließend kann der Vektor den Vertices im Netzwerk zugewiesen...
+
+vertex_attr(Freunde_Net) # ...und die Vertex-Attribute inspiziert werden
+
+```
+
+
+```{r}
+
+### AUFGABE ###
+# Erstelle ein neues Vertex-Attribut "age" und füge es dem Netzwerk hinzu. Inspiziere, wie die Daten nun aussehen. Lass dir dafür die ersten fünf Vertices im Datensatz anzeigen.
+
+Alter <- c(18, 20, 21, 19, 18, 17, 22, 23)
+Freunde_Net_with_age <- set_vertex_attr(Freunde_Net, "age", value = Alter)
+
+Freunde_Net_with_age
+
+V(Freunde_Net_with_age)[[1:5]] # Der Zugriff auf Netzwerk-Elemente erfolgt über eine doppelte Eck-Klammer
+
+```
+
+
+```{r}
+
+# Nun widmen wir uns den Edges, die auch mit Attributen versehen werden sollen:
+
+E(Freunde_Net_with_age)
+
+Stunden <- c(2, 3, 5, 1, 7, 3, 4, 2, 4, 6) # Auch hierfür legen wir zunächst einen Vektor an - dafür müssen wir uns an die bisherige Datenstruktur halten - ...
+Freunde_Net_new <- set_edge_attr(Freunde_Net_with_age, "hours", value = Stunden) # ...und weisen diesen dem Datensatz zu
+
+edge_attr(Freunde_Net_new) # Was passiert hier?
+
+# --> Zeigt die den Edges zugewiesenen Attribute, in diesem Fall die Stunden (hours) an
+
+E(Freunde_Net_new)[[1:5]]
+
+```
+
+
+```{r}
+
+### AUFGABE ###
+# Finde alle Beziehungen, in die Michael involviert ist.
+
+E(Freunde_Net_new)[[.inc("Michael")]] # Hiermit bilden wir quasi ein Subset für das Netzwerk von Michael
+
+# Identifiziere nun alle Vertices, die mindestens 4 Stunden Kontakt miteinander hatten.
+
+E(Freunde_Net_new)[[hours >= 4]]
+
+```
+
+
+```{r}
+
+# Entfernen von Edges:
+
+Freunde_Net_min3 <- delete_edges(Freunde_Net_new, E(Freunde_Net_new)[hours <= 2])
+plot(Freunde_Net_min3) # Was ist hier passiert?
+
+# --> Alle Verbindungen, die 2 oder weniger Stunden umfassen, wurden aus dem Netzwerk entfernt
+
+```
+
+
+```{r}
+
+# Für viele der folgenden Auswertungen brauchen wir nun noch zusätzlich ein gerichtetes Netzwerk:
+
+Freunde <- data.frame(name = c("Lisa", "Melanie", "Michael", "Chris", "Janine", "Tina", "Mareike", "Tom"),
+                      gender = c("weiblich", "weiblich", "männlich", "männlich", "weiblich", "weiblich", "weiblich", "männlich"),
+                      age = c(18, 20, 21, 19, 18, 17, 22, 23)) # Das können wir einfach von oben übernehmen
+
+Beziehungen <- data.frame(from = c("Lisa", "Michael", "Janine", "Tina", "Lisa", "Michael", "Michael", "Tina", "Lisa", "Tom", "Melanie", "Chris", "Mareike", "Mareike"),
+                          to = c("Melanie", "Chris", "Chris", "Mareike", "Mareike", "Mareike", "Melanie", "Melanie", "Chris", "Mareike", "Lisa", "Michael", "Tina", "Michael"), # Hier müssen wir die Richtung der Beziehungen festlegen
+                          weight = c(2, 3, 5, 1, 7, 3, 4, 2, 4, 6, 4, 1, 6, 3))
+# Mit der Bezeichnung "weight" weisen wir die bisherigen Stunden als Gewicht zu; würden wir sie weiter "hours" nennen, würde R dieses Element nicht als Gewichtung erkennen
+
+Freunde_Net_dir <- graph_from_data_frame(Beziehungen, directed = TRUE, vertices = Freunde) # Daraus erzeugen wir ein iGraph-Objekt
+
+plot(Freunde_Net_dir) # Nun haben wir ein gerichtetes...
+Freunde_Net_dir
+is.directed(Freunde_Net_dir)
+
+is.weighted(Freunde_Net_dir) # ...und gewichtetes Netzwerk
+
+Freunde_Net_dir[]
+# Erzeugt eine Adjacency Matrix vom Netzwerk mit den Gewichtungswerten
+
+```
+
+
+```{r}
+
+# Für den besseren Überblick, kann man ein iGraph-Objekt aber auch jederzeit in ein Dataframe umwandeln:
+# Zunächst für die Edges:
+karate_dataframe_edges <- data.frame(as_edgelist(karate), stringsAsFactors = FALSE)
+karate_dataframe_edges
+# Fügt Edge-Attribute hinzu
+karate_dataframe_edges$weight <- as.character(E(karate)$weight)
+
+# Und nun der Vertex-Dataframe:
+karate_dataframe_vertices <- data.frame(name = as.character(V(karate)$name), 
+                                faction = as.character(V(karate)$Faction),
+                                label = as.character(V(karate)$label),
+                                stringsAsFactors = FALSE)
+karate_dataframe_vertices
+# Es benötigt zwei unterschiedliche Dataframes, da die Anzahl der Edges in der Regel nicht der Anzahl der Vertices entspricht
+
+```
+
+
+```{r}
+
+# Und nun schauen wir uns noch an, wie eine Two-Mode-Netzwerk erstellt werden kann
+
+Mode1 <- c("Fußballverein", "Fußballverein", "Fußballverein", "Fußballverein", "Fußballverein", "Handballverein", "Handballverein", "Handballverein", "Handballverein", "Leichtathletik", "Leichtathletik", "Leichtathletik", "Tanz", "Tanz", "Tanz", "Tanz" ) # Dieser Vektor beinhaltet die Sportvereine in der Stadt...
+Mode2 <- c("Michael", "Chris", "Tom", "Jannik", "David", "Mareike", "Melanie", "Tom", "Chris", "Mareike", "Lisa", "Janine", "Tina", "Michael", "Yvonne", "Nils") # ...und dieser Vektor zeigt die Vereinszugehörigkeit der Personen aus dem Freunde-Netzwerk
+
+# Zunächst gehen wir vor, wie bisher gelernt...
+Vereinszugehörigkeit <- cbind(Mode1, Mode2)
+
+# ...und erstellen ein igraph-Objekt:
+Vereinsnetzwerk <- graph.edgelist(Vereinszugehörigkeit, directed = FALSE)
+
+Vereinsnetzwerk
+plot(Vereinsnetzwerk)
+
+# Als nächsten Schritt müssen wir R verständlich machen, dass dieses Netzwerk als Two-Mode-Netzwerk behandelt werden soll:
+bipartite_mapping(Vereinsnetzwerk)
+# $res zeigt an, dass "Vereinsnetzwerk" die Kriterien erfüllt, die für ein Two-Mode-Netzwerk notwendig sind
+# $type zeigt an, welche Vertices welchem Mode zugeordnet sind --> diese Zuordnung weisen wir nun dem Netzwerk als Vertex-Attribut zu:
+V(Vereinsnetzwerk)$type <- bipartite_mapping(Vereinsnetzwerk)$type
+
+```
+
+
+### Strukturen eines Netzwerkes ###
+
+```{r}
+
+# Identifizieren von Edges:
+
+karate["Actor 2", "John A"] # Gibt es eine Verbindung von Actor 2 und John A?
+karate["Mr Hi", "Actor 2"] # ...und zwischen Mr Hi und Actor 2?
+karate["Actor 2", "Mr Hi"] # ...und umgekehrt? Wieso kommt es zu diesem Ergebnis?
+
+# --> Da es sich um ein ungerichtetes Netzwerk handelt; die Gewichtung ist daher nur der Verbindung zwischen den beiden Vertices per se zugeordnet
+
+incident(karate, "Mr Hi", mode = c("all")) # Zeigt alle Edges an, die Mr Hi einbeziehen
+# Von einem Vertex ausgehende Edges werden über "out" und eingehende Edges über "in" aufgerufen 
+# Würde das in diesem Fall etwas an den Ergebnissen ändern?
+
+
+
+# Und wie sieht es mit den Kontakthäufigkeiten von Mr Hi im Netzwerk aus?
+
+degree(karate, "Mr Hi", mode = c("all"))
+# "out" ermittelt den Out-Degree eines jeden Vertex, "in" den In-Degree
+
+centr_degree(karate, mode = c("all")) # res = Vertex-bezogener Centrality Score --> siehe Degree-Wert von Mr Hi, der in der Auflistung an Position [1] steht; centralization = Netzwerk-bezogener Centrality-Wert; theoretical_max = Der theoretisch maximale Centrality-Wert für das Netzwerk bei den gegebenen Rahmenbedingungen
+
+```
+
+
+```{r}
+
+### AUFGABE ###
+# Zeige alle Kanten, die im gerichteten Freunde-Netzwerk von Melanie ausgehen.
+
+incident(Freunde_Net_dir, "Melanie", mode = c("out")) # ...und umgekehrt?
+
+incident(Freunde_Net_dir, "Melanie", mode = c("in")) 
+
+# Ermittle nun den In-Degree für alle Vertices im Freunde-Netzwerk.
+
+degree(Freunde_Net_dir, mode = c("in"))
+
+```
+
+
+```{r}
+
+# Identifizieren von Neighbors:
+
+neighbors(karate, "Actor 7", mode = c("all")) # Zeigt alle Nachbarn von Actor 7 im karate-Netzwerk an
+
+neighbors(Freunde_Net_dir, "Chris", mode = c("in")) # Zeigt jene Nachbarn von Chris, die sich diesem zuwenden
+
+# Und was ist mit gemeinsamen Nachbarn?
+Nachbarn1 <- neighbors(Freunde_Net_dir, "Michael", mode = c("out"))
+Nachbarn2 <- neighbors(Freunde_Net_dir, "Tina", mode = c("in"))
+intersection(Nachbarn1, Nachbarn2) # Mareike ist die Person, die von Michael kontaktiert wird und wiederum Tina kontaktiert; sie haben also keinen direkten Einfluss aufeinander, sondern Michael wirkt indirekt über Mareike auf Tina ein
+
+```
+
+
+```{r}
+
+# Positionsmaße:
+
+# Betweenness (Brücken-Funktion eines Knoten im Netzwerk)
+
+BetweennessKarate <- betweenness(karate, directed = FALSE) # Wichtig ist hier die Angabe der Gerichtetheit
+# Werte müssen nicht zugewiesen werden, können so aber leichter für Visualisierungen genutzt werden
+BetweennessKarate # Zeigt den Betweenness-Wert für jeden Vertex im karate-Netzwerk an
+
+BetweennessFreunde <- betweenness(Freunde_Net_dir, directed = TRUE, normalized = TRUE) # Normalisierung hilft hinsichtlich einer besseren Vergleichbarkeit der relativen Wichtigkeit der Vertices im Netzwerk --> Kann bei allen Zentralitätsmaßen genutzt werden
+# Unter Hinzufügen von weights = NA wird die Gewichtung nicht berücksichtigt
+BetweennessFreunde # Welcher Vertex nimmt eine wichtige Funktion als Brücke im Netzwerk ein?
+
+# --> Michael
+
+```
+
+
+```{r}
+
+# Closeness
+
+closeness(karate, mode = c("all"), normalized = TRUE) # Wenn die Gewichtung nicht berücksichtigt werden soll, dann weights = NA in die Funktion einfügen; zudem kann unter Hinzufügen von normalized = TRUE auch hier eine Normalisierung erfolgen, die eine bessere Vergleichbarkeit ermöglicht
+
+```
+
+
+```{r}
+
+# Eigenvector Centrality
+
+eigen_centrality(karate, directed = FALSE) # Zeigt die Eigenvektor-Zentralitätswerte für jeden Vertex im Netzwerk an
+# Hinzufügen von weights = NA für Nichtberücksichtigung der Gewichtungen
+
+# Welche Vertices weisen eine hohe Eigenvektor-Zentralität auf und was bedeutet das hinsichtlich ihrer Position im Netzwerk?
+
+# --> John A, Actor 3, Actor 33, Mr Hi und Actor 2 --> Diese Vertices sind stark vernetzt und das vor allem mit Vertices, die ebenso stärker vernetzt sind --> Interessant ist, dass nicht nur John A und Mr Hi (als Leiter ihrer Clubs) hohe Werte aufweisen, sondern auch andere Vertices (- möglicherweise Trainer?)
+
+```
+
+
+```{r}
+
+# Aufzeigen von Paths:
+
+farthest_vertices(karate, directed = FALSE) 
+# Zeigt den Durchmesser des Netzwerkes an --> die zwei Vertices im Netzwerk, die am weitesten voneinander entfernt sind und wie groß diese Distanz ist (berücksichtigt Gewichtungen! - daher ggf. weights = NA) --> beide Vertices befinden sich auf dem Diameter-Pfad an den jeweiligen Endpunkten
+
+farthest_vertices(karate, directed = FALSE, weights = NA) # Durch die Nicht-Berücksichtigung der Gewichtung ändert sich der Pfad!
+
+diameter(karate, directed = FALSE) # Länge der geodesic distance, die den Durchmesser des Netzwerkes bestimmt (berücksichtigt Gewichtungen!)
+get_diameter(karate, directed = FALSE) # Kürzester Pfad zwischen den beiden am weitesten entfernt liegenden Vertices im Netzwerk (ohne Gewichtungen!) # Zeigt den konkreten Diameter-Pfad an
+
+
+mean_distance(karate, directed = FALSE) # Berücksichtigt Gewichtungen, daher ggf. weights = NA
+# Average Path Length --> Mittel der Längen aller kürzesten Pfade zwischen allen Vertex-Paaren im Netzwerk --> Kleinere Werte deuten auf eine höhere Verbundenheit untereinander und damit einen besseren Kommunikationsfluss im Netzwerk hin
+mean_distance(Freunde_Net_dir, directed = TRUE)
+
+
+ego(Freunde_Net_dir, 2, "Melanie", mode = c("out")) # Zeigt alle Vertices, die von Melanie innerhalb von 2 Pfadlängen erreicht werden können --> Melanie kann über Lisa sowohl Chris als auch Mareike erreichen
+# "in" zeigt alle Vertices an, die einen bestimmten Vertex innerhalb von x Verbindungen erreichen können
+
+```
+
+
+```{r}
+
+# Erzeugen eines Ego-Netzwerkes (--> Subset; bezogen auf einen Vertex und dessen Verbindungen im Hauptnetzwerk):
+
+NetworkJohnA <- ego(karate) # Bei dem Netzwerk soll es sich um ein Ego-Netzwerk handeln
+NetworksKarate <- lapply(NetworkJohnA, function(x) induced_subgraph(karate, x)) # Legt die Möglichkeit an, für jeden Vertex im Netzwerk ein Ego-Sub-Netzwerk anzulegen
+NetworkJohnA <- NetworksKarate[[34]] # Indexnummer 34 gehört zu John A --> Ego-Netzwerk um John A
+
+class(NetworkJohnA)
+
+NetworkJohnA # Was fällt hier auf?
+
+# --> Auch Beziehungen, die nicht direkt mit John A interagieren, werden angezeigt, da es sich hierbei um direkte Nachbarn, der Nachbarn handelt - mit denen John A allerdings in großen Teilen auch in Verbindung steht
+
+plot(NetworkJohnA)
+
+```
+
+
+```{r}
+
+# Density
+
+edge_density(Freunde_Net_dir) # Was sagt dieser Wert über das Netzwerk aus?
+
+# --> 25 Prozent aller möglichen Verbindungen im Netzwerk existieren tatsächlich
+
+```
+
+
+```{r}
+
+### AUFGABE ###
+# Erzeuge ein beliebiges Ego-Netzwerk eines Knotens im karate-Netzwerk. Wie groß ist die Dichte dieses Netzwerkes? Was sagt uns dieser Wert im Vergleich zur Dichte des Gesamtnetzwerkes aus?
+
+NetworkActor3 <- ego(karate)
+NetworksKarate <- lapply(NetworkActor3, function(x) induced_subgraph(karate, x))
+NetworkActor3 <- NetworksKarate[[3]]
+
+plot(NetworkActor3)
+
+edge_density(NetworkActor3)
+edge_density(karate)
+
+```
+
+
+```{r}
+
+# Entdecken von Triaden:
+
+triangles(karate) # Entdeckt die geschlossenen Triaden in einem Netzwerk und listet diese auf (die ersten drei Vertices im Vector gehören zur ersten Triade usw.)
+count_triangles(karate) # Gibt zu jedem Vertex die Anzahl an Triaden an, zu denen dieser gehört
+
+count_triangles(karate, vids = "Mr Hi") # Anzahl der geschlossenen Triaden, zu denen "Mr Hi" gehört
+
+
+# Transitivität (--> Clustering Coefficient)
+
+transitivity(karate) # Wahrscheinlichkeit, dass in einem Netzwerk aneinander angrenzende Vertices miteinander verbunden sind
+
+# Lokale Transitivität
+
+transitivity(karate, vids = "Mr Hi", type = "local") # Anteil der geschlossenen Triaden, denen ein Vertex angehört, gemessen an den Triaden denen er theoretisch auf Basis seiner Verbindungen angehören könnte
+
+```
+
+
+```{r}
+
+# Komponenten und Modularität von bzw. in Netzwerken:
+
+# Identifizieren von Cliquen
+
+largest_cliques(karate) # Identifiziert die größte(n) Clique(n) in einem Netzwerk 
+# ...in diesem Fall sind es zwei, die aus jeweils 5 Knoten bestehen
+
+MaxCliquenKarate <- max_cliques(karate) # Zeigt jede im Netzwerk zu findende Clique an
+MaxCliquenKarate # ...in diesem Fall sind es ziemlich viele Cliquen, wie bereits aus den Triaden-Ergebnissen zu vermuten war (Achtung: Zählt auch Zweier-Cliquen, also nicht nur Triaden)
+
+table(unlist(lapply(MaxCliquenKarate, length))) # unlist() simplifiziert die Darstellung
+# Auflistung der Cliquen-Größen (11 mal 2er-Cliquen); 21 mal 3er-Cliquen, usw.
+
+```
+
+
+```{r}
+
+# Assortivity
+
+# --> Wichtig: Kategoriale Variablen müssen zuvor in nummerische Variablen recodiert werden
+
+Gender.Nummerisch <- as.numeric(factor(V(Freunde_Net_dir)$gender))
+
+assortativity(Freunde_Net_dir, Gender.Nummerisch, directed = TRUE) # Bestimmt die Assortativity für das Netzwerk bezüglich des Merkmals (Vertex-Attribut) Geschlecht
+# Was bedeutet der Wert?
+
+# --> Innerhalb des Freunde-Netzwerkes sind Personen unabhängig vom Geschlecht miteinander verbunden
+
+# 0 bedeutet, dass kein Muster erkennbar ist; +1 bedeutet, dass nur Vertices gleicher Eigenschaften miteinander connecten; -1 bedeutet, dass Vertices gleicher Eigenschaften einander meiden
+
+assortativity_degree(Freunde_Net_dir, directed = TRUE) # Assortativity-Wert für das gesamte Netzwerk, basierend auf den den Vertices zugewiesenen Attributen
+
+```
+
+
+```{r}
+
+### AUFGABE ###
+# Bestimme den Assortativity-Wert für das Netzwerk karate. Was sagt dieser aus? Welche(s) Attribut(e) der Vertices ist/sind hier vor allem relevant und sinnvoll für die Bestimmung?
+
+assortativity.degree(karate, directed = FALSE)
+
+vertex_attr(karate)
+
+Faction.Nummerisch <- as.numeric(factor(V(karate)$Faction)) # Ist im Datensatz als kategoriale Variable hinterlegt und muss daher in eine nummerische Variable umgewandelt werden
+
+assortativity(karate, Faction.Nummerisch, directed = FALSE)
+
+# --> Name, Label (als Kurzform für den Namen) und Color (Colorierung der Vertices in visuellen Darstellungen; basierend auf der Zugehörigkeit zur Trainingsgruppe) machen keinen Sinn --> Faction macht einzig Sinn zur Ermittlung von Gemeinsamkeiten (der Einbezug von Color würde das Ganze nur doppeln)
+# --> Tatsächlich neigen Personen im Netzwerk karate dazu eher mit Personen zu connecten, mit denen sie Gemeinsamkeiten haben, also mit denen sie die gleiche Trainingsgruppe teilen
+
+```
+
+
+```{r}
+
+# Reciprocity (--> Anteil an symmetrischen Verbindungen in einem Netzwerk)
+
+reciprocity(Freunde_Net_dir)
+
+```
+
+
+########## Visualisierung von Netzwerken #########
+
+```{r}
+
+# Nutzung von Layouts:
+
+plot(Freunde_Net_dir, vertex.label.color = "black", layout = layout_in_circle(Freunde_Net_dir)) # Ein passendes Layout kann die grafische Darstellung optimieren
+
+
+# Es gibt zudem weitere Layouts:
+
+# layout_with_fr()
+# layout_as_tree() # --> Hierfür muss das Dataframe zunächst über den Befehl einer Matrix zugewiesen werden und damit in ein Format gebracht wird, die dann als Tree-Diagramm dargestellt werden kann
+Freunde_Net_dir_matrix <- layout_as_tree(Freunde_Net_dir)
+plot(Freunde_Net_dir, vertex.label.color = "black", layout = Freunde_Net_dir_matrix)
+
+# layout_nicely() # --> Gleiches Prinzip wie bei layout_as_tree()
+
+# component_wise()
+# layout_as_bipartite()
+# layout_as_star()
+# layout_on_grid()
+# layout_on_sphere()
+# layout_randomly()
+# layout_with_dh()
+# layout_with_fr()
+# layout_with_gem()
+# layout_with_graphopt()
+# layout_with_kk()
+# layout_with_lgl()
+# layout_with_mds()
+# layout_with_sugiyama()
+# merge_coords()
+# norm_coords()
+# normalize()
+
+### Das jeweilige Layout sollte danach gewählt werden, dass sich die Edges im Netzwerk idealerweise nicht kreuzen (...was selten zu erreichen ist, daher sollte die Form gewählt werden, wo es verhältnismäßig wenig vorkommt...) und ähnlich lang sind; Vertices sollten nicht überlappen und Schlüssel-Vertices sollten im Zentrum eines Netzwerkes stehen
+
+```
+
+
+```{r}
+
+### AUFGABE ###
+# Probiert verschiedene Layouts am Freunde-Netzwerk aus.
+
+```
+
+
+```{r}
+
+# Visuelle Gewichtung von Edges:
+
+Hours <- E(Freunde_Net_dir)$weight # Zunächst müssen wir einen Vektor erstellen, der die Gewichtungen beinhaltet
+
+Freunde_Net_dir_matrix <- layout_nicely(Freunde_Net_dir)
+plot(Freunde_Net_dir, 
+        vertex.label.color = "black", 
+        vertex.size = 25,
+        edge.color = "black",
+        edge.arrow.size = 0.7,
+        edge.arrow.width = 0.7,
+        edge.width = Hours, # Diesen Vektor fügen wir anschließend als Gewichtung in die Plot-Funktion ein # Da wir bereits die Stunden als weight im Datensatz angelegt hatten, würde hier auch das Einfügen von E(Freunde_Net_dir)$weight reichen und die Erstellung eines Gewichtungs-Vektors wäre nicht notwendig
+        layout = Freunde_Net_dir_matrix)
+
+```
+
+
+```{r}
+
+# Visuelle Hervorhebung der Beziehungen nach ihrer geodesic distance:
+
+NetworkJohnA # Hierfür nutzen wir den Ego-Graph von John A aus dem karate-Netzwerk...
+
+Distance <- distances(NetworkJohnA, "John A") # ...und legen einen Vektor an, der die geodesic distances ausgehend von John A enthält...
+
+Distance # Berücksichtigt Gewichtungen
+
+Colors <- c("white", "red", "orange", "blue", "green") # ...sowie einen Vektor, der den Distanzwerten jeweils eine Farbe zuordnet
+
+V(NetworkJohnA)$color <- Colors[Distance+1] # Mit aufsteigendem Distanzwert wird die nächstfolgende Farbe zugeordnet
+
+V(NetworkJohnA)$color
+
+plot(NetworkJohnA,
+     vertex.color = V(NetworkJohnA)$color,
+     vertex.label.color = "black",
+     vertex.label.cex = 1,
+     edge.color = "gray",
+     vertex.size = 20,
+     main = "Geodesic Distances from John A") # Gibt der Grafik eine Überschrift
+
+```
+
+
+```{r}
+
+# Visuelle Hervorhebung auf Basis der Eigenvektor-Zentralität:
+
+EigenvektorFreunde <- eigen_centrality(Freunde_Net_dir, directed = TRUE)
+
+plot(Freunde_Net_dir,
+     vertex.label.color = "black",
+     vertex.label.cex = 1,
+     edge.color = "gray",
+     edge.arrow.size = 0.7,
+     edge.arrow.width = 0.5,
+     vertex.size = 30 * (EigenvektorFreunde$vector),
+     layout = layout_in_circle(Freunde_Net_dir))
+
+```
+
+
+```{r}
+
+# Visuelle Hervorhebung der Vertices entlang des Diameters:
+
+DiameterKarate <- get_diameter(karate, directed = FALSE)
+
+
+VertexColor <- rep("gray", vcount(karate))
+
+VertexColor[DiameterKarate] <- "gold" # Ordnet den Vertices, die entlang des Diameter liegen, die Farbe gold zu
+
+EdgeColor <- rep("gray", ecount(karate))
+
+EdgeColor[E(karate, path = DiameterKarate)] <- "orange" # Ordnet den Pfaden, die der Diameter umfasst, die Farbe orange zu
+
+
+plot(karate, vertex.color = VertexColor, edge.color = EdgeColor)
+
+```
+
+
+```{r}
+
+# Visuelle Hervorhebung der Edges, die von einem bestimmten Vertex ausgehen:
+
+IncidentKarate <- incident(karate, "John A", mode = c("all"))
+
+
+VertexColor2 <- rep("gray", vcount(karate))
+
+VertexColor2[[34]] <- "gold"
+
+EdgeColor2 <- rep("gray", ecount(karate))
+
+EdgeColor2[IncidentKarate] <- "orange"
+
+
+plot(karate, vertex.color = VertexColor2, edge.color = EdgeColor2)
+
+```
+
+
+```{r}
+
+# Visuelle Hervorhebung der Nachbarn, die von einem bestimmten Vertex ausgehen:
+
+NachbarnJohnA <- neighbors(karate, "John A", mode = c("all"))
+
+
+VertexColor3 <- rep("gray", vcount(karate))
+
+VertexColor3[NachbarnJohnA] <- "red" # Zeigt alle Nachbarn von John A in rot an
+
+
+plot(karate, vertex.color = VertexColor3)
+
+
+# Und nun fügen wir das alles mal zusammen:
+
+VertexColor4 <- ifelse(V(karate)$name == "John A", "gold", "gray")
+
+VertexColor4[NachbarnJohnA] <- "red"
+
+
+plot(karate, vertex.color = VertexColor4, edge.color = EdgeColor2)
+
+```
+
+
+```{r}
+
+# Änderung der Farbe und Form der Vertices auf Basis gleicher Merkmale:
+
+V(Freunde_Net_new)$color <- ifelse(V(Freunde_Net_new)$gender == "weiblich", "pink", "lightblue") # Weist den weiblichen Vertices die Farbe pink zu und allen anderen die Farbe blau
+V(Freunde_Net_new)$shape <- ifelse(V(Freunde_Net_new)$gender == "weiblich", "circle", "square") # Weist den weiblichen Vertices runde und allen anderen quadratische Formen zu
+
+plot(Freunde_Net_new, vertex.label.color = "black", vertex.label.cex = 0.5)
+legend("right", legend = c("weiblich", "männlich"), col = c("pink", "lightblue"), pch = 21, cex = 1, bty = "n", title = "Gender") # Fügt eine einfache Legende hinzu
+# Beide Funktionen müssen zusammen ausgeführt werden
+
+```
+
+
+```{r}
+
+### AUFGABE ###
+# Visualisiere das Two-Mode-Netzwerk "Vereinsnetzwerk" indem die beiden Modes unterschiedliche Farb- und Formgebungen erhalten.
+
+vertex_attr(Vereinsnetzwerk)
+
+V(Vereinsnetzwerk)$type <- ifelse(V(Vereinsnetzwerk)$type == TRUE, "Mitglieder", "Verein") # Benennt die Ausprägungen von type um, damit diese aussagekräftiger sind
+
+V(Vereinsnetzwerk)$color <- ifelse(V(Vereinsnetzwerk)$type == "Mitglieder", "grey", "orange")
+V(Vereinsnetzwerk)$shape <- ifelse(V(Vereinsnetzwerk)$type == "Mitglieder", "circle", "square")
+
+plot(Vereinsnetzwerk, vertex.label.color = "black", vertex.size = 27, vertex.label.cex = 0.6, layout = layout_with_graphopt(Vereinsnetzwerk))
+legend("bottomright", legend = c("Verein", "Mitglieder"), col = c("orange", "grey"), pch = 21, cex = 1, bty = "n", title = "Vereinszugehörigkeit")
+
+```
+
+
+```{r}
+
+# Gegenüberstellung von zwei Netzwerken:
+
+CliquenKarate <- largest_cliques(karate) # Identifiziert die größte(n) Clique(n) in einem Netzwerk
+CliquenKarate
+
+# Diese zwei größten Cliquen werden neuen Sub-Netzwerken zugewiesen:
+
+Clique1 <- induced_subgraph(karate, CliquenKarate[[1]])
+Clique2 <- induced_subgraph(karate, CliquenKarate[[2]])
+
+par(mfrow = c(1,2)) # Plottet beide Cliquen nebeneinander
+
+# Spezifikationen für die jeweiligen Plots:
+
+plot(Clique1,
+     vertex.label.color = "black",
+     vertex.label.cex = 1,
+     edge.color = "gray",
+     vertex.size = 20,
+     main = "Largest Clique 1",
+     layout = layout.circle(Clique1))
+
+plot(Clique2,
+     vertex.label.color = "black",
+     vertex.label.cex = 1,
+     edge.color = "gray",
+     vertex.size = 20,
+     main = "Largest Clique 2",
+     layout = layout.circle(Clique2))
+
+# --> Alle drei Befehle müssen zusammen ausgeführt werden
+
+
+# Gegenüberstellung des Ego-Netzwerkes von Mr Hi und John A:
+
+NetworkJohnA_org <- ego(karate)
+NetworksKarate_org <- lapply(NetworkJohnA_org, function(x) induced_subgraph(karate, x))
+NetworkJohnA_org <- NetworksKarate_org[[34]] #Setzt die Colorierung auf die Ursprungsangaben zurück
+
+NetworkMrHi <- ego(karate)
+NetworksKarate <- lapply(NetworkMrHi, function(x) induced_subgraph(karate, x))
+NetworkMrHi <- NetworksKarate[[1]] # Hierfür benötigen wir noch ein Ego-Netzwerk für Mr Hi
+# Indexnummer 1 gehört zu Mr Hi --> Ego-Netzwerk um Mr Hi
+
+par(mfrow = c(1,2))
+
+plot(NetworkMrHi,
+     vertex.label.color = "black",
+     vertex.label.cex = 0.5,
+     edge.color = "gray",
+     vertex.size = 20,
+     main = "Ego-Netzwerk von Mr Hi")
+
+plot(NetworkJohnA_org,
+     vertex.label.color = "black",
+     vertex.label.cex = 0.5,
+     edge.color = "gray",
+     vertex.size = 20,
+     main = "Ego-Netzwerk von John A")
+
+```
+
+
+```{r}
+
+# Weitere Möglichkeiten der Visualisierung:
+
+# Zum Beispiel in Form einer Heatmap:
+
+AdjMatrVisualisierung <- get.adjacency(Freunde_Net_dir, attr = "weight", sparse = FALSE)
+
+colnames(AdjMatrVisualisierung) <- V(Freunde_Net_dir)$name
+
+rownames(AdjMatrVisualisierung) <- V(Freunde_Net_dir)$name
+
+
+ColorsVisual <- colorRampPalette(c("gold", "dark orange")) # Erstellt einen Farbverlauf, der mit zunehmender Intensität in Richtung dunkles orange geht
+
+heatmap(AdjMatrVisualisierung, Rowv = NA, Colv = NA, col = ColorsVisual(100), scale = "none", margins = c(10,10))
+
+```
+
+
+```{r}
+
+# Es gibt verschiedene andere Packages, die ebenso Netzwerk-Visualisierungen ermöglichen:
+
+install.packages("visNetwork")
+library(visNetwork)
+
+install.packages("tidygraph")
+library(tidygraph)
+
+install.packages("ggraph")
+library(ggraph)
+
+install.packages("networkD3") # Für 3-dimensionale Netzwerk-Grafiken
+library(networkD3)
+
+```
+
+
+### Interaktive Netzwerkvisualisierungen ###
+
+```{r}
+
+
+install.packages("threejs")
+library(igraph) # Da threejs über iGraph läuft
+library(threejs) # Ermöglicht die Visualisierung großer Netzwerke, in die rein-/rausgezoomt und welche rotiert werden können; auch das Verschieben von Vertices und das Erhalten von zusätzlichen Informationen über diese ist möglich
+
+graphjs(karate, vertex.size = 1) # Nutzt eure Maus, um die Grafik zu rotieren und rein- sowie rauszuzoomen
+
+
+# Nun hübschen wir die Grafik aber noch ein bisschen auf, indem wir bereits gelernte (oder auch neue;)) Eigenschaften hinzufügen:
+
+EigenvektorKarate <- as.numeric(eigen_centrality(karate)$vector) # Für die Anpassung der Vertex-Größen nutzen wir die Eigenvector-Centrality
+
+graphjs(karate, vertex.size = 2 * EigenvektorKarate)
+
+
+graphjs(karate, vertex.size = 2 * EigenvektorKarate, vertex.color = VertexColor4, edge.color = EdgeColor2, layout = layout_with_fr(karate, dim = 3)) # Zeigt John A (in gelb) und seine direkten Nachbarn (in rot) an
+
+graphjs(karate, vertex.size = 2 * EigenvektorKarate, vertex.color = VertexColor4, edge.color = EdgeColor2, layout = layout_with_fr(karate, dim = 3), brush = TRUE) # Und jetzt klickt mal auf einen beliebigen Knoten im Netzerk - Was passiert?
+
+```
+

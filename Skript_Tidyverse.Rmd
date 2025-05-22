@@ -1,0 +1,435 @@
+---
+title: "Arbeiten mit Tidyverse"
+output: html_document
+date: "2022-10-04"
+---
+
+########## Arbeiten mit dem Package Tidyverse ##########
+
+```{r setup}
+
+# Tidyverse ist eine Sammlung von Tools für die Transformation und Visualisierung von Daten, z. B. dplyr, ggplot2, tidyr etc.
+
+install.packages("tidyverse")
+library(tidyverse)
+
+```
+
+
+```{r}
+
+# Jetzt arbeiten wir auch mit einem richtigen Datensatz: Gapminder --> enthält ökonomische und soziale Indikatoren, wie z. B. Lebenserwartung und das BIP im Zeitverlauf
+
+install.packages("gapminder")
+library(gapminder) # Beinhaltet den Datensatz mit dem wir arbeiten
+
+# Ein erster Blick in den Datensatz:
+View(gapminder)
+head(gapminder) # Zeigt die Ausprägungen zu den ersten 6 Fällen im Datensatz
+summary(gapminder)
+dim(gapminder)
+
+# Welches Land im Datensatz weißt die geringste Lebenserwartung auf?
+which.min(gapminder$lifeExp) # Gibt die Indexnumber zur geringsten Lebenserwartung aus --> Fall hinter der Indexnummer 1293
+gapminder$country[1293] # Rwanda ist das Land mit der geringsten Lebenserwartung im gesamten Datensatz
+gapminder$lifeExp[1293] # Die Lebenserwartung in Rwanda beträgt zum Erhebungszeitpunkt 23.6 Jahre
+
+```
+
+
+# Zunächst wollen wir ein bisschen an den Daten arbeiten:
+
+########## Datentransformation mit dplyr ##########
+
+```{r}
+
+install.packages("dplyr")
+library(dplyr) # Einfache Transformation von Daten (z. B. filtern und sortieren)
+
+```
+
+
+```{r}
+
+# Filtern
+
+Subset <- gapminder %>%
+  filter(year == 2007) # Um nur mit einem Subset - Daten aus dem Jahr 2007 - des Datensatzes zu arbeiten
+
+Subset
+
+```
+
+
+```{r}
+
+### AUFGABE ###
+# Erstelle einen Filter, der nur die Daten für Germany anzeigt.
+
+Subset2 <- gapminder %>% 
+  filter(country == "Germany")
+
+Subset2
+
+gapminder %>% filter(year == 2007, country == "Germany") # Filtert den Datensatz nach der Bedingung Jahreszahl und der Bedingung Land
+
+```
+
+
+```{r}
+
+# Sortieren
+
+gapminder %>%
+  arrange(gdpPercap) # Sortierung anhand der BIP-Variable in aufsteigender Reihenfolge
+
+# Für eine Sortierung in absteigender Reihenfolge schreibt man Folgendes:
+
+gapminder %>%
+  arrange(desc(gdpPercap))
+
+```
+
+
+```{r}
+
+### AUFGABE ###
+# Sortiere in einem Subset (Filter!) für das Jahr 2002 die Daten nach dem absteigenden BIP.
+
+gapminder %>% 
+  filter(year == 2002) %>%
+  arrange(desc(gdpPercap))
+
+# Welche fünf Länder haben 2007 die höchsten Lebenserwartungen?
+
+Subset4 <- gapminder %>% 
+  filter(year == 2007) %>%
+  arrange(desc(lifeExp))
+
+head(Subset4, n = 5) # Zeigt explizit die ersten fünf an
+
+Country <- gapminder$country # Extrahiert die Spalte Country...
+Country1 <- as.data.frame(Country) # ...und legt sie als Dataframe ab (tatsächlich wäre eine Liste hier aber sinnvoller, da es sich ja nur um eine Spalte handelt)
+
+Country1
+
+```
+
+
+```{r}
+
+# Verändern des Datensatzes
+
+gapminder %>%
+  mutate(pop = pop/1000000) # Verändert oder fügt eine Variable hinzu --> in diesem Fall wird die alte Population-Variable durch eine neue ersetzt
+
+# "=" fungiert hier als Zuweisungs-Operator
+
+New_Dataset <- gapminder %>%
+  mutate(gdp = gdpPercap * pop) # Erzeugt die neue Variable gdp (total gdp)
+
+New_Dataset
+
+```
+
+
+```{r}
+
+### AUFGABE ###
+# Erstelle eine neue Variable, in der die Lebenserwartung in Monaten angegeben ist. Filtere dann den Datensatz nach dem Jahr 2002 und sortiere die Einträge absteigend nach der Lebenserwartung in Monaten.
+
+gapminder %>% 
+  mutate(lifeExpMonths = lifeExp * 12) %>% 
+  filter(year == 2002) %>% 
+  arrange(desc(lifeExpMonths))
+
+```
+
+
+```{r}
+
+# Zusammenfassen von Daten
+
+gapminder %>% 
+  summarize(meanlifeExp = mean(lifeExp)) # Erzeugt aus den einzelnen Lebenserwartungen die mittlere Lebenserwartung und komprimiert damit die ganze Tabelle zu einer einzigen Zeile
+
+```
+
+
+```{r}
+
+### AUFGABE ###
+# Erzeuge die mittlere Lebenserwartung und die Gesamtpopulation für das Jahr 2002.
+
+gapminder %>%
+  filter(year == 2002) %>%
+  summarize(meanLifeExp = mean(lifeExp), totalPop = sum(pop))
+
+# Andere Parameter die innerhalb der Summarize-Funktion sinnvoll eingesetzt werden können sind z. B.
+# median()
+# min()
+# max()
+
+```
+
+
+```{r}
+
+gapminder %>%
+  group_by(year) %>%
+  summarize(meanLifeExp = mean(lifeExp), totalPop = sum(pop)) # Gruppiert die zusammengefassten Daten anhand des Jahres
+
+gapminder %>%
+  group_by(year, continent) %>%
+  summarize(meanLifeExp = mean(lifeExp), totalPop = sum(pop)) # Gruppiert per Jahr und Kontinent und ermöglicht damit einen ersten Überblick über Entwicklungen im Zeitverlauf --> was wir später noch visuell darstellen werden =)
+
+# ungroup( ) hebt die vorgenommenen Gruppierungen wieder auf
+
+```
+
+
+########## Visualisierung mit ggplot2 #########
+
+```{r}
+
+library(ggplot2)
+
+ggplot(Subset, aes(x = gdpPercap, y = lifeExp)) + 
+  geom_point() # Erstellt einen Scatterplot der beiden Variablen BIP und Lebenserwartung
+
+# Was sagt uns der Plot?
+# --> Länder, die über ein höheres BIP verfügen, tendieren auch zu einer höheren Lebenserwartung
+# ...die Grafik ist allerdings sehr gedrungen, d. h. viele Länder sind auf einem Haufen, aufgrund der Skalierung... 
+
+```
+
+
+```{r}
+
+# --> ...um das Ganze ein wenig zu entzerren, empfiehlt sich eine logarithmierte Skalierung:
+
+ggplot(Subset, aes(x = gdpPercap, y = lifeExp)) + 
+  geom_point() +
+  scale_x_log10()
+
+```
+
+
+```{r}
+
+# Jetzt machen wir unsere Grafik ein bisschen hübscher und gleichzeitig informativer;)
+
+ggplot(Subset, aes(x = gdpPercap, y = lifeExp, color = continent)) + 
+  geom_point() +
+  scale_x_log10() # Stellt die Kontinente nun farblich dar und fügt eine Legende hinzu, die die Farben erklärt
+
+ggplot(Subset, aes(x = gdpPercap, y = lifeExp, color = continent, size = pop)) + 
+  geom_point() +
+  scale_x_log10() # Visualisiert die Datenpunkte auf Basis der Größe der Bevölkerung eines jeden Landes
+
+```
+
+
+```{r}
+
+# Erstellen von Subplots:
+
+ggplot(Subset, aes(x = gdpPercap, y = lifeExp)) +
+  geom_point() +
+  scale_x_log10() +
+  facet_wrap(~ continent)
+
+```
+
+
+```{r}
+
+### AUFGABE ###
+# Erstelle für jedes Jahr Scatterplots, in denen das BIP auf der x-Achse und die Lebenserwartung auf der y-Achse gegenübergestellt sind. Innerhalb der Plots sind die Länder farblich dem jeweiligen Kontinent zugeordnet, zu dem sie gehören und die Bevölkerungsgröße wird über die Größe der Datenpunkte visualisiert.
+
+Grafik1 <- ggplot(gapminder, aes(x = gdpPercap, y = lifeExp, color = continent, size = pop)) + geom_point() + 
+  scale_x_log10() +
+  facet_wrap( ~ year)
+
+ggsave("Grafik1.png") # Speichert den Plot als Grafik, auch möglich in den Formaten .pdf, .svg, .tiff, .jpeg usw.
+
+```
+
+
+```{r}
+
+# Erinnert ihr euch noch an die Gruppierungsbeispiele von oben...jetzt visualisieren wir diese =)
+
+Data_by_year <- gapminder %>%
+  group_by(year) %>%
+  summarize(meanLifeExp = mean(lifeExp), totalPop = sum(pop))
+
+# Zunächst mal ein Blick in die Daten, mit denen wir jetzt arbeiten:
+
+Data_by_year
+
+```
+
+
+```{r}
+
+ggplot(Data_by_year, aes(x = year, y = totalPop)) +
+  geom_point() + 
+  expand_limits(y = 0) # Lässt die y-Achse bei 0 beginnen
+
+Data_by_year_continent <- gapminder %>%
+  group_by(year, continent) %>%
+  summarize(meanLifeExp = mean(lifeExp), totalPop = sum(pop))
+
+ggplot(Data_by_year_continent, aes(x = year, y = totalPop, color = continent)) +
+  geom_point() +
+  expand_limits(y = 0)
+
+
+# Wie können am besten die einzelnen Länder eines Kontinents im Zeitverlauf dargestellt werden:
+
+Countries_in_Europe <- gapminder %>%
+  filter(continent == "Europe") # Subset für Europe erstellen
+
+Countries_in_Europe
+
+Data_by_year_countryEur <- Countries_in_Europe %>%
+  group_by(year, country) %>%
+  summarize(meanLifeExp = mean(lifeExp), totalPop = sum(pop)) # Beispiel für Countries in Europe
+
+Data_by_year_countryEur
+
+ggplot(Data_by_year_countryEur, aes(x = year, y = totalPop, color = country)) +
+  geom_line() +
+  expand_limits(y = 0) # So sind es immer noch viele Länder, aber die Darstellung ist schon ein wenig übersichtlicher als der weltweite Vergleich...am besten wäre es auch hier nur bestimmte Länder zum Vergleich auszuwählen oder zu aggregieren...je nach Forschungsinteresse
+# Auch der Hinzufügen von Labels kann in vielen Fällen helfen, wäre aber auch hier zu viel (da einfach zu viele Länder)
+
+ggplot(Data_by_year_countryEur, aes(x = year, y = meanLifeExp, color = country)) +
+  geom_line() +
+  expand_limits(y = 0) 
+
+```
+
+
+```{r}
+
+# Weitere Visualisierungsmöglichkeiten:
+# geom_line()
+# geom_col() (Balkendiagramm)
+# geom_histogram (Histogramm)
+# geom_boxplot()
+
+# Schauen wir uns z. B. die vorletzte erstellte Visualisierung als Liniendiagramm an:
+
+ggplot(Data_by_year_continent, aes(x = year, y = totalPop, color = continent)) +
+  geom_line() +
+  expand_limits(y = 0)
+
+```
+
+
+```{r}
+
+# Zudem gibt es vorprogrammierte Plot-Designs:
+
+install.packages("ggthemes")
+library(ggthemes)
+
+```
+
+
+```{r}
+
+### AUFGABE ###
+# Probiere ein paar der unten aufgelisteten Themen am folgenden Code aus:
+
+ggplot(Data_by_year, aes(x = year, y = totalPop)) + 
+  theme_* +
+  geom_point() +
+  expand_limits(y = 0)
+
+# theme_base
+# theme_calc
+# theme_economist
+# theme_economist_white
+# theme_excel
+# theme_few
+# theme_fivethirtyeight
+# theme_foundation
+# theme_gdocs
+# theme_hc
+# theme_igray
+# theme_map
+# theme_pander
+# theme_par
+# theme_solarized
+# theme_solarized_2
+# theme_solid
+# theme_stata
+# theme_tufte
+# theme_wsj
+
+```
+
+
+```{r}
+
+# ...es sind auch noch weitere optische Anpassungen möglich:
+
+Plot <- # ...zunächst können wir den Plot als Grafik in der Arbeitsumgebung (Environement) ablegen...
+  ggplot(gapminder, aes(x = gdpPercap, y = lifeExp, color = continent)) + 
+  geom_point() +
+  labs (x = "BIP", y = "Lebenserwartung", color = "Kontinent") # ...und nun benennen wir die Beschriftungen der x- und y-Achse des Plots um
+
+Plot + geom_point(alpha = 0.2) # Auch die abgelegte Grafik kann nachträglich noch bearbeitet werden
+
+```
+
+
+########## Dynamische Grafiken ##########
+
+```{r}
+
+install.packages("gganimate")
+library(gganimate)
+
+install.packages("gifski")
+library(gifski)
+
+```
+
+
+```{r}
+
+# Als Basis dient unsere zuletzt erstellte Grafik:
+
+New_Plot <- Plot + 
+  geom_point(aes(size = pop)) + 
+  geom_text( # ...und wir fügen noch eine kleine Spielerei mit der Jahreszahl hinzu, die in der Animation gut zur Geltung kommt
+  x = 90000, y = 30, # Koordinaten für die Position der Jahreszahl
+  aes(label = as.character(year)),
+  size = 15, col = "black")
+
+```
+
+
+```{r}
+
+# ...und jetzt noch die Animation:
+
+Animation <- animate(New_Plot + transition_time(year), width = 700, height = 400, fps = 20, 
+render = gifski_renderer())
+
+Animation
+
+```
+
+
+```{r}
+
+# Um das GIF in unserem Arbeitsverzeichnis zu speichern:
+
+anim_save("Gapminder_Animation.gif", Animation)
+
+```
+

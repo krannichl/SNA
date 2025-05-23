@@ -16,7 +16,7 @@ library(igraph)
 library(conflicted)
 
 # Laden Sie die Daten
-daten <- read_delim("C:/Users/Krann/OneDrive - bwedu/Studium/5. Semester/Social Network Analysis/paths-finished-tsv.tsv", delim = "\t")
+daten <- read_delim("data/paths-finished-tsv.tsv", delim = "\t")
 
 # Überprüfen Sie die Struktur der Daten
 str(daten)

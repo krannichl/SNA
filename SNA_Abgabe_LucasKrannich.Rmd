@@ -9,30 +9,17 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+# Social Network Analysis - Wikispeedia - Lucas Krannich
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+Das vorliegende Projekt wurde in einzelarbeit statt in Gruppenarbeit durchgeführt.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+Das vorliegende Projekt orientiert sich Grundlegend an dem folgenden Artikel:
+https://studentwork.prattsi.org/infovis/labs/exploring-the-network-behind-wikispeedia/
 
-```{r cars}
-summary(cars)
-```
+Die Starke orientierung an dem verlinkten Artikel ist unter anderem damit zu begründen, dass der Student eher zu den "fachlich schwächeren" gehört, mit diesem Projekt allerdings eine Herausforderung gesucht wurde, um sich selbst weiter zu entwickeln und weiterzuentwickeln.
 
-## Including Plots
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
-
-```{}
-```
-
-## Data Preprocessing
+## Imports (Data & Libraries)
 
 Libraries importieren
 
@@ -52,12 +39,23 @@ df <- read_tsv("C:/Users/Krann/GitHub/SNA/paths-finished-tsv.tsv", col_names = T
 ```{r df head}
 head(df)
 ```
+
+## Data Cleaning
+
+Die Daten wurden vor dem Einlesen in R bereits mit Open Refine bereinigt. Die Bereinigung in Open Refine basiert auf der beschreibung des Artikels.
+Zeilen, deren Navigationspfade die ein "<" Zeichen enthalten wurden entfernt. ein "<" Zeichen lässt darauf schließen, dass der Spieler zurück auf die Vorherige Wikipedia seite gesprungen ist. In der vorliegenden Analyse sollen nur Pfade betrachtet werden, die direkt von Start- zu Endpunkt durchgeführt wurden, ohne zurück zu gehen. Es soll ein ungerichtetes Netzwerkt dargestellt werden.
+
+Zudem wurden alle Zeilen entfernt, in denen der Spieler maximal 2min gebraucht hat. So können ausreiser vermieden werden und die verbleibenden Datenbasis hat homogene Eigenschaften.
+
 Trotz vorheriger Bereinigung enthält der Datensatz noch "NULL" werte. Allerdings hadelt es sich hierbei nicht um klassische 0 werte, sondern um String werte. Im nächsten Schritt werden alle Zeilen, die einen Null-Wert enthalten, entfernt.
+Die Null-Werte werden in R-Entfernt. In Open Refine wäre dies auch möglich gewesen, es wurde sich aber dagegen entschieden, da der Umgang & Die Arbeit mit Open Refine teilweise nicht so intuitiv ist und eine Bereinigung in R schneller geht. Auf eine erneute verwendung von Open Refine würde in zukünftigen Projekten nur zurückgegriffen werden, wenn zuvor bereits alle bereinigungsschritte klar sind, da die verwendung von Open Refine sonst eher umständlich ist.
 
 ```{r df Info}
 df <- df %>%
   filter(rating != "NULL")
 ```
+
+
 
 ```{r df head2}
 head(df)

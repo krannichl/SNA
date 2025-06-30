@@ -55,6 +55,11 @@ df <- df %>%
   filter(rating != "NULL")
 ```
 
+```{r}
+nrow(df)
+```
+
+Der Datensatz wurde auf 13.527 Zeilen herunter reduziert.
 
 
 ```{r df head2}

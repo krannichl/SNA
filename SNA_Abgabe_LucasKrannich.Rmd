@@ -16,6 +16,10 @@ Das vorliegende Projekt wurde in einzelarbeit statt in Gruppenarbeit durchgefüh
 Das vorliegende Projekt orientiert sich Grundlegend an dem folgenden Artikel:
 https://studentwork.prattsi.org/infovis/labs/exploring-the-network-behind-wikispeedia/
 
+# -> Auf genutzte Tools eingehen
+# ToDo: Einbringen, dass Tool zur darstellung nicht genutzt wird
+
+
 Die Starke orientierung an dem verlinkten Artikel ist unter anderem damit zu begründen, dass der Student eher zu den "fachlich schwächeren" gehört, mit diesem Projekt allerdings eine Herausforderung gesucht wurde, um sich selbst weiter zu entwickeln und weiterzuentwickeln.
 
 
@@ -40,7 +44,6 @@ df <- read_tsv("C:/Users/Krann/GitHub/SNA/paths-finished-tsv.tsv", col_names = T
 head(df)
 ```
 
-## ToDo: Einbringen, dass Tool zur darstellung nicht genutzt wird
 
 
 ## Data Cleaning

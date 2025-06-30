@@ -47,19 +47,18 @@ Zeilen, deren Navigationspfade die ein "<" Zeichen enthalten wurden entfernt. ei
 
 Zudem wurden alle Zeilen entfernt, in denen der Spieler maximal 2min gebraucht hat. So können ausreiser vermieden werden und die verbleibenden Datenbasis hat homogene Eigenschaften.
 
-Trotz vorheriger Bereinigung enthält der Datensatz noch "NULL" werte. Allerdings hadelt es sich hierbei nicht um klassische 0 werte, sondern um String werte. Im nächsten Schritt werden alle Zeilen, die einen Null-Wert enthalten, entfernt.
+Trotz vorheriger Bereinigung enthält der Datensatz noch "NULL" werte. Diese sind in der Spalte "Rating" wiederzufinden. Allerdings hadelt es sich hierbei nicht um klassische 0 werte, sondern um String werte. Im nächsten Schritt werden alle Zeilen, die einen Null-Wert enthalten, entfernt.
 Die Null-Werte werden in R-Entfernt. In Open Refine wäre dies auch möglich gewesen, es wurde sich aber dagegen entschieden, da der Umgang & Die Arbeit mit Open Refine teilweise nicht so intuitiv ist und eine Bereinigung in R schneller geht. Auf eine erneute verwendung von Open Refine würde in zukünftigen Projekten nur zurückgegriffen werden, wenn zuvor bereits alle bereinigungsschritte klar sind, da die verwendung von Open Refine sonst eher umständlich ist.
 
-```{r df Info}
+```{r df filter, message=FALSE }
 df <- df %>%
   filter(rating != "NULL")
-```
 
-```{r}
 nrow(df)
 ```
 
-Der Datensatz wurde auf 13.527 Zeilen herunter reduziert.
+
+Der Datensatz wurde von ca. 50.000 Zeilen auf 13.527 Zeilen herunter reduziert.
 
 
 ```{r df head2}
@@ -71,7 +70,9 @@ Der Datensatz ist jetzt vollständig bereinigt.
 
 ## Vorbereitung Netzwerk Analyse
 
-Funktion zum Extrahieren der Übergänge aus einem Pfad
+Im ersten Schritt wird die Funktion Extract Edges erstellt.
+Die Navigationspfade aus dem Datensatz werden ausgelesen aufgeteilt und gespeichert. Pfade mit weniger als 2 Werten werden ignoriert. Das liegt daran, dass der Startpunkt somit auch dem Endpunkt wäre.
+Anschließend wird eine gerichtete Edgelist erstellt.
 
 ```{r edgelist}
 
@@ -87,7 +88,8 @@ extract_edges <- function(path_string) {
 
 ```
 
-Anwenden auf alle Pfade
+Die Funktion extract_edges wird auf den Datensatz angewandt.
+Die Variable edge_list enthält nun die gerichtete Edge List für alle Navigationspfade des Datensatzes.
 
 ```{r}
 edge_list <- df %>%
@@ -95,28 +97,37 @@ edge_list <- df %>%
   map_dfr(extract_edges)
 ```
 
-Kanten Gewichten
+Die Edge List wird entsprechend der Häufigkeit der einzelnen Pfaden Aggregiert und in der Variable weighted_edges gespeichert. 
 
 ```{r}
 weighted_edges <- edge_list %>%
   count(source, target, name = "weight")
 ```
 
-ungerichtetes Netzwerkobjekt erzeugen
+Da das Ziel der Analyse die erstellung eines ungerichteten Graphen ist, wird die "gerichtetheit" der Edge List aufgehoben.
 
 ```{r}
 g <- graph_from_data_frame(weighted_edges, directed = FALSE)
 ```
 
-Berechne zentrale Metriken und speichere sie als Knotenattribute
+Berechnung von 2 Zentralitätsmaße für alle Knoten im Netzwerk.
+
+Betweenness: Wie oft liegt ein Knoten auf den kürzesten Pfaden zwischen anderen Knoten.
+-> Es wrde sich für die Betweenness entschieden, da erkannt werden sollte, welche Knoten eine "Verbinder Rolle" haben (hierfür spricht ein hoher wert)
+
+Degree: Berechnet für jeden Knoten die Anzahl der angrenzenden Kanten.
+-> Ein hoher Wert spricht dafür, dass der Knoten eine hohe lokale Konnektivität hat. Da er sich eignet, um populäre Seiten / populären Knoten zu identifizieren, wurde dieser Wert gewählt.
 
 ```{r}
 V(g)$betweenness <- betweenness(g)
 V(g)$degree <- degree(g)
 ```
 
+
 Experimentieren Sie mit diesem Schwellenwert (z.B. 10, 20, 50, 100)
 Beispiel: Nur Knoten mit mindestens X Verbindungen behalten
+
+
 ```{r}
 min_degree_threshold <- 40
 

@@ -40,6 +40,9 @@ df <- read_tsv("C:/Users/Krann/GitHub/SNA/paths-finished-tsv.tsv", col_names = T
 head(df)
 ```
 
+## ToDo: Einbringen, dass Tool zur darstellung nicht genutzt wird
+
+
 ## Data Cleaning
 
 Die Daten wurden vor dem Einlesen in R bereits mit Open Refine bereinigt. Die Bereinigung in Open Refine basiert auf der beschreibung des Artikels.
@@ -74,7 +77,7 @@ Im ersten Schritt wird die Funktion Extract Edges erstellt.
 Die Navigationspfade aus dem Datensatz werden ausgelesen aufgeteilt und gespeichert. Pfade mit weniger als 2 Werten werden ignoriert. Das liegt daran, dass der Startpunkt somit auch dem Endpunkt wäre.
 Anschließend wird eine gerichtete Edgelist erstellt.
 
-```{r edgelist}
+```{r edgelist function}
 
 extract_edges <- function(path_string) {
   pages <- unlist(strsplit(path_string, ";"))
@@ -91,7 +94,7 @@ extract_edges <- function(path_string) {
 Die Funktion extract_edges wird auf den Datensatz angewandt.
 Die Variable edge_list enthält nun die gerichtete Edge List für alle Navigationspfade des Datensatzes.
 
-```{r}
+```{r create edge list}
 edge_list <- df %>%
   pull(path) %>%
   map_dfr(extract_edges)
@@ -99,14 +102,14 @@ edge_list <- df %>%
 
 Die Edge List wird entsprechend der Häufigkeit der einzelnen Pfaden Aggregiert und in der Variable weighted_edges gespeichert. 
 
-```{r}
+```{r edge list gewichten}
 weighted_edges <- edge_list %>%
   count(source, target, name = "weight")
 ```
 
-Da das Ziel der Analyse die erstellung eines ungerichteten Graphen ist, wird die "gerichtetheit" der Edge List aufgehoben.
+Da das Ziel der Analyse die Erstellung eines ungerichteten Graphen ist, wird die "gerichtetheit" der Edge List aufgehoben.
 
-```{r}
+```{r gerichtetheit aufheben}
 g <- graph_from_data_frame(weighted_edges, directed = FALSE)
 ```
 
@@ -118,15 +121,49 @@ Betweenness: Wie oft liegt ein Knoten auf den kürzesten Pfaden zwischen anderen
 Degree: Berechnet für jeden Knoten die Anzahl der angrenzenden Kanten.
 -> Ein hoher Wert spricht dafür, dass der Knoten eine hohe lokale Konnektivität hat. Da er sich eignet, um populäre Seiten / populären Knoten zu identifizieren, wurde dieser Wert gewählt.
 
-```{r}
+```{r Zentralitätsmaße}
 V(g)$betweenness <- betweenness(g)
 V(g)$degree <- degree(g)
 ```
 
-### Hier weiter machen
+```{r}
+plot_unfiltered_network <- ggraph(g, layout = "fr") +
+  # Kanten: Gewicht → Breite, Farbe: dezent
+  geom_edge_link(aes(width = weight), alpha = 0.2, color = "gray40") +
+  scale_edge_width(range = c(0.2, 3)) +
+
+  # Knoten: Größe nach Betweenness, Farbe nach Degree
+  geom_node_point(aes(size = betweenness, color = degree), show.legend = TRUE) +
+  scale_size_continuous(range = c(1, 10)) +
+  scale_color_viridis_c(option = "B", direction = -1) +
+
+  # Knotenbeschriftung – stark eingeschränkt zur Vermeidung von Überladung
+  geom_node_text(aes(label = name), repel = TRUE, size = 2.5, max.overlaps = 10) +
+
+  theme_void() +
+  labs(
+    title = "Wikispeedia Netzwerkvisualisierung (ungesäubert)",
+    subtitle = "Größe = Betweenness Centrality | Farbe = Degree | Keine Filterung"
+  ) +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+    plot.subtitle = element_text(hjust = 0.5, size = 12)
+  )
+
+```
 
 ```{r}
-min_degree_threshold <- 40
+print(plot_unfiltered_network)
+```
+
+Da es sich immernoch um ein sehr umfangreiches Netzwerk handelt, wird es auf den Degree gefiltert und Knoten deren Degree unter dem festgelegten Schwellenwert liegen, werden in der Weiteren Analyse nicht weiter beachtet.
+Dieses Vorgehen schafft einerseits ein übersichtlicheres Netzwerk unterstützt, da das Rauschen im Datensatz veringert wird. Andererseits wird der Fokus der Analyse stärker auf die Kernstruktur gelegt, da lediglich strukturell relevante Knoten in die Analyse mit einbezogen werden. Zudem wird eine übersichtlichere Visuelle Darstellung ermöglicht.
+
+Eine Alternative Filterung auf die Betweenness wurde in der vorliegenden Analysennicht durchgeführt.
+
+```{r degree filter}
+min_degree_threshold <- 60
 
 
 g_filtered <- g %>%
@@ -138,8 +175,9 @@ cat("Anzahl der Knoten im gefilterten Graphen (Degree-Filter):", vcount(g_filter
 ```
 
 
-WICHTIG: Wenn Sie Knoten löschen, sollten Betweenness und Degree neu berechnet werden,
-da sich die Pfade und Verbindungen im gefilterten Graphen ändern.
+Erneute berechnung der Betweenness- und Degree-Werte,auf Basis des gefilterten Netzwerks.
+Dies ist notwendig, weil sich durch das Entfernen von Knoten im vorherigen Schritt auch die Struktur des Netzwerks verändert und damit die relativen zentralen Rollen der verbliebenen Knoten neu zu bestimmen sind.
+
 
 ```{r}
 V(g_filtered)$betweenness <- betweenness(g_filtered)
@@ -147,9 +185,49 @@ V(g_filtered)$degree <- degree(g_filtered)
 
 ```
 
-# Visualisierung des gefilterten Netzwerks
+##Hier komplett nochmal drüber schauen und Doku ergänzen
+
+```{r tabellenansicht}
+# Alle Knotenattribute als DataFrame extrahieren
+node_metrics_df <- as_data_frame(g_filtered, what = "vertices")
+
+# Vorschau auf die Tabelle
+head(node_metrics_df)
+
+# Optional: Nach Betweenness sortieren, um zentrale Knoten zu identifizieren
+node_metrics_df_sorted_betweenness <- node_metrics_df %>%
+  arrange(desc(betweenness))
+
+# Vorschau auf die Tabelle
+head(node_metrics_df_sorted_betweenness)
+
+# Optional: Nach Betweenness sortieren, um zentrale Knoten zu identifizieren
+node_metrics_df_sorted_degree <- node_metrics_df %>%
+  arrange(desc(degree))
+
+# Vorschau auf die Tabelle
+head(node_metrics_df_sorted_degree)
+
+```
+
 
 ```{r}
+edge_df <- as_data_frame(g_filtered, what = "edges")
+
+# Optional: Nach gewicht sortieren, um zentrale Knoten zu identifizieren
+edge_df_sorted <- edge_df %>%
+  arrange(desc(weight))
+
+head(edge_df_sorted)
+
+```
+
+
+# Visualisierung des gefilterten Netzwerks
+
+## hier nochmal dran arbeiten
+
+```{r plot function, warning=FALSE}
 plot_filtered_network <- ggraph(g_filtered, layout = "fr") +
   # Kanten: Breite nach Gewicht, Farbe dunkelgrün
   geom_edge_link(aes(width = weight), alpha = 0.3, color = "darkgreen") + # alpha leicht erhöht
@@ -164,7 +242,7 @@ plot_filtered_network <- ggraph(g_filtered, layout = "fr") +
   theme_void() + # Entfernt Achsen und Hintergrund
   labs(
     title = "Wikispeedia Netzwerkvisualisierung (gefiltert)",
-    subtitle = "Größe = Betweenness Centrality | Farbe = Degree | Filter: Degree > 3"
+    subtitle = "Größe = Betweenness Centrality | Farbe = Degree | Filter: Degree > 60"
   ) +
   theme(
     legend.position = "right", # Legendenposition anpassen

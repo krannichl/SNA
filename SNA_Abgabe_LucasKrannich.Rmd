@@ -123,10 +123,7 @@ V(g)$betweenness <- betweenness(g)
 V(g)$degree <- degree(g)
 ```
 
-
-Experimentieren Sie mit diesem Schwellenwert (z.B. 10, 20, 50, 100)
-Beispiel: Nur Knoten mit mindestens X Verbindungen behalten
-
+### Hier weiter machen
 
 ```{r}
 min_degree_threshold <- 40

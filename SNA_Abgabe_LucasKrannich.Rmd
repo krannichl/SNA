@@ -126,6 +126,8 @@ V(g)$betweenness <- betweenness(g)
 V(g)$degree <- degree(g)
 ```
 
+## Hier nochmal Dokumentieren & mal mit overlaps rumspielen
+
 ```{r}
 plot_unfiltered_network <- ggraph(g, layout = "fr") +
   # Kanten: Gewicht → Breite, Farbe: dezent
@@ -221,7 +223,7 @@ edge_df_sorted <- edge_df %>%
 head(edge_df_sorted)
 
 ```
-
+# Auf Basis der Tabelenwerte erste sachen erklären
 
 # Visualisierung des gefilterten Netzwerks
 
@@ -258,7 +260,7 @@ print(plot_filtered_network)
 ```
 
 
-
+## Hier Fazit und sagen, dass man die ergebnisse besser aus tabelle wie netzwerk lesen kann
 
 
 

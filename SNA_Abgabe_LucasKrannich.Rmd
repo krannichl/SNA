@@ -11,21 +11,24 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Social Network Analysis - Wikispeedia - Lucas Krannich
 
-Das vorliegende Projekt wurde in einzelarbeit statt in Gruppenarbeit durchgeführt.
+Das vorliegende Projekt wurde in einzelarbeit statt in Gruppenarbeit durchgeführt.Im folgenden findet eine Netzwerkanalyse des Datensatzes "Wikispeedia Navigation Paths" statt.
+Der Datensatz enthält aufgezeichnete Navigationspfade des Browserspiels "Wikispeedia". In Wikispeedia werden die Benutzer aufgefordert, von einer bestimmten Quelle zu einem bestimmten Zielartikel zu navigieren, indem sie nur Wikipedia-Links anklicken.
+
+Auf den zugrundliegenden Datensatz kann über die Stanford Large Network Dataset collection (SNAP) zugegriffen werden. https://snap.stanford.edu/data/wikispeedia.html
+
 
 Das vorliegende Projekt orientiert sich Grundlegend an dem folgenden Artikel:
 https://studentwork.prattsi.org/infovis/labs/exploring-the-network-behind-wikispeedia/
 
-# -> Auf genutzte Tools eingehen
-# ToDo: Einbringen, dass Tool zur darstellung nicht genutzt wird
+Die Starke orientierung an dem verlinkten Artikel ist unter anderem damit zu begründen, dass der Autor eher zu den "fachlich schwächeren Studenten" gehört, mit diesem Projekt allerdings eine Herausforderung gesucht wurde, um sich selbst weiter zu entwickeln.
 
+Im zugrundeliegenden Artikel werden neben RStudio auch die Tools "Open Refine" und "Gephi" genutzt. In der vorliegenden Arbeit wird von der Nutzung von Gephi abgesehen und es wird lediglich Open Refine genutzt.
 
-Die Starke orientierung an dem verlinkten Artikel ist unter anderem damit zu begründen, dass der Student eher zu den "fachlich schwächeren" gehört, mit diesem Projekt allerdings eine Herausforderung gesucht wurde, um sich selbst weiter zu entwickeln und weiterzuentwickeln.
+Open Refine ist ein Tool zur Datenbereinigung und -aufbereitung. Es unterstützt den benutzer hierbei mit einer grafischen Oberfläche. Im folgenden wird im Kapitel Data Cleaning erneut darauf eingegangen.
 
 
 ## Imports (Data & Libraries)
 
-Libraries importieren
 
 ```{r libraries, message=FALSE, warning=FALSE}
 library(tidyverse)
@@ -37,7 +40,7 @@ library(tidygraph)
 TSV-Datei einlesen & Info zu Daten ausgeben
 
 ```{r read df, message=FALSE, warning=FALSE}
-df <- read_tsv("C:/Users/Krann/GitHub/SNA/paths-finished-tsv.tsv", col_names = TRUE)
+df <- read_tsv("C:/Users/Krann/GitHub/SNA/Wikispeedia-paths-finished.tsv", col_names = TRUE)
 ```
 
 ```{r df head}
@@ -48,10 +51,9 @@ head(df)
 
 ## Data Cleaning
 
-Die Daten wurden vor dem Einlesen in R bereits mit Open Refine bereinigt. Die Bereinigung in Open Refine basiert auf der beschreibung des Artikels.
-Zeilen, deren Navigationspfade die ein "<" Zeichen enthalten wurden entfernt. ein "<" Zeichen lässt darauf schließen, dass der Spieler zurück auf die Vorherige Wikipedia seite gesprungen ist. In der vorliegenden Analyse sollen nur Pfade betrachtet werden, die direkt von Start- zu Endpunkt durchgeführt wurden, ohne zurück zu gehen. Es soll ein ungerichtetes Netzwerkt dargestellt werden.
-
-Zudem wurden alle Zeilen entfernt, in denen der Spieler maximal 2min gebraucht hat. So können ausreiser vermieden werden und die verbleibenden Datenbasis hat homogene Eigenschaften.
+Die Daten wurden vor dem Einlesen in R bereits mit Open Refine bereinigt. Die Bereinigung in Open Refine basiert auf der beschreibung des Artikels. Die bereinigte Version der Daten ist im verlinkten GitHub zu finden. https://github.com/krannichl/SNA/tree/main
+IN der Bereinigung wurden Zeilen, deren Navigationspfade die ein "<" Zeichen enthalten entfernt. Ein "<" Zeichen lässt darauf schließen, dass der Spieler auf die vorherige Wikipediaseite zurück gesprungen ist. In der vorliegenden Analyse sollen nur Pfade betrachtet werden, die direkt von Start- zu Endpunkt durchgeführt wurden, ohne zurück zu gehen. Es soll ein ungerichtetes Netzwerkt dargestellt werden.
+Zudem wurden alle Zeilen entfernt, in denen der Spieler maximal 2min gebraucht hat. So können ausreiser vermieden werden und die verbleibenden Datenbasis ist homogen in dieser Eigenschaft.
 
 Trotz vorheriger Bereinigung enthält der Datensatz noch "NULL" werte. Diese sind in der Spalte "Rating" wiederzufinden. Allerdings hadelt es sich hierbei nicht um klassische 0 werte, sondern um String werte. Im nächsten Schritt werden alle Zeilen, die einen Null-Wert enthalten, entfernt.
 Die Null-Werte werden in R-Entfernt. In Open Refine wäre dies auch möglich gewesen, es wurde sich aber dagegen entschieden, da der Umgang & Die Arbeit mit Open Refine teilweise nicht so intuitiv ist und eine Bereinigung in R schneller geht. Auf eine erneute verwendung von Open Refine würde in zukünftigen Projekten nur zurückgegriffen werden, wenn zuvor bereits alle bereinigungsschritte klar sind, da die verwendung von Open Refine sonst eher umständlich ist.
@@ -129,9 +131,11 @@ V(g)$betweenness <- betweenness(g)
 V(g)$degree <- degree(g)
 ```
 
-## Hier nochmal Dokumentieren & mal mit overlaps rumspielen
+## "Naiver Plot"
 
-```{r}
+Im folgenden wird zunächst der erste Plot des Netzwerks dargelegt, um den Stand nach der Datenbereinigung zu visualisieren.
+
+```{r Naiver PLot}
 plot_unfiltered_network <- ggraph(g, layout = "fr") +
   # Kanten: Gewicht → Breite, Farbe: dezent
   geom_edge_link(aes(width = weight), alpha = 0.2, color = "gray40") +
@@ -158,11 +162,11 @@ plot_unfiltered_network <- ggraph(g, layout = "fr") +
 
 ```
 
-```{r}
+```{r print Naive plot }
 print(plot_unfiltered_network)
 ```
 
-Da es sich immernoch um ein sehr umfangreiches Netzwerk handelt, wird es auf den Degree gefiltert und Knoten deren Degree unter dem festgelegten Schwellenwert liegen, werden in der Weiteren Analyse nicht weiter beachtet.
+Da es sich nach dem Data Cleaning immernoch um ein sehr umfangreiches Netzwerk handelt, wird es auf den Degree gefiltert und Knoten deren Degree unter dem festgelegten Schwellenwert "60" liegen, werden in der Weiteren Analyse nicht weiter beachtet.
 Dieses Vorgehen schafft einerseits ein übersichtlicheres Netzwerk unterstützt, da das Rauschen im Datensatz veringert wird. Andererseits wird der Fokus der Analyse stärker auf die Kernstruktur gelegt, da lediglich strukturell relevante Knoten in die Analyse mit einbezogen werden. Zudem wird eine übersichtlichere Visuelle Darstellung ermöglicht.
 
 Eine Alternative Filterung auf die Betweenness wurde in der vorliegenden Analysennicht durchgeführt.
@@ -184,55 +188,15 @@ Erneute berechnung der Betweenness- und Degree-Werte,auf Basis des gefilterten N
 Dies ist notwendig, weil sich durch das Entfernen von Knoten im vorherigen Schritt auch die Struktur des Netzwerks verändert und damit die relativen zentralen Rollen der verbliebenen Knoten neu zu bestimmen sind.
 
 
-```{r}
+```{r Zentralitätsmaße2}
 V(g_filtered)$betweenness <- betweenness(g_filtered)
 V(g_filtered)$degree <- degree(g_filtered)
 
 ```
 
-##Hier komplett nochmal drüber schauen und Doku ergänzen
-
-```{r tabellenansicht}
-# Alle Knotenattribute als DataFrame extrahieren
-node_metrics_df <- as_data_frame(g_filtered, what = "vertices")
-
-# Vorschau auf die Tabelle
-head(node_metrics_df)
-
-# Optional: Nach Betweenness sortieren, um zentrale Knoten zu identifizieren
-node_metrics_df_sorted_betweenness <- node_metrics_df %>%
-  arrange(desc(betweenness))
-
-# Vorschau auf die Tabelle
-head(node_metrics_df_sorted_betweenness)
-
-# Optional: Nach Betweenness sortieren, um zentrale Knoten zu identifizieren
-node_metrics_df_sorted_degree <- node_metrics_df %>%
-  arrange(desc(degree))
-
-# Vorschau auf die Tabelle
-head(node_metrics_df_sorted_degree)
-
-```
-
-
-```{r}
-edge_df <- as_data_frame(g_filtered, what = "edges")
-
-# Optional: Nach gewicht sortieren, um zentrale Knoten zu identifizieren
-edge_df_sorted <- edge_df %>%
-  arrange(desc(weight))
-
-head(edge_df_sorted)
-
-```
-# Auf Basis der Tabelenwerte erste sachen erklären
-
 # Visualisierung des gefilterten Netzwerks
 
-## hier nochmal dran arbeiten
-
-```{r plot function, warning=FALSE}
+```{r gefilterter Plot, warning=FALSE}
 plot_filtered_network <- ggraph(g_filtered, layout = "fr") +
   # Kanten: Breite nach Gewicht, Farbe dunkelgrün
   geom_edge_link(aes(width = weight), alpha = 0.3, color = "darkgreen") + # alpha leicht erhöht
@@ -256,19 +220,92 @@ plot_filtered_network <- ggraph(g_filtered, layout = "fr") +
   )
 ```
 
-
-
-```{r}
+```{r print gefilterter Plot}
 print(plot_filtered_network)
 ```
 
+Das gefilterte Netzwerk ist bereits besser Interpretierbar. 
+Sowohl die Betweenness als auch der Degree der Knoten ist ersichtlich und bietet einen klaren Einblick in die Relevanz der knoten.
+Jedoch ist hervorzuheben, dass die gewichtung der Kanten in der Gewählten Darstellung optimierungspotenzial hat, da diese in der visuellen Darstellung kaum erkenntlich ist.
+Zudem liegt im vorliegenden Fall die Problematik vor, dass mit einem gewinn an übersichtlichkeit die gefahr besteht informationen zu verlieren.
+Um die visuellen erkenntnisse zu unterstützen werden im folgenden die knoten gemäß ihrer Betweenness, Degree und Gewichtungswerte tabellarisch dargestellt.
+
+## tabellarische Darstellung
+
+Aufgrund des Umfangs der Daten werden im vorliegenden Markdown nur die Vorschau auf die Tabellen (Tabellenköpfe) dargestellt.
+
+```{r df für Netzwerk Tabellenansicht}
+node_metrics_df <- as_data_frame(g_filtered, what = "vertices")
+```
+
+```{r Netzwerk Tabellenansicht sortiert nach betweeness}
+node_metrics_df_sorted_betweenness <- node_metrics_df %>%
+  arrange(desc(betweenness))
+
+head(node_metrics_df_sorted_betweenness, n= 10)
+
+
+tail(node_metrics_df_sorted_betweenness, n= 10)
+```
+Betweenness zeigt die relative Bedeutung eines knotens im Netzwerk
+Größte Rolle z.B. über die Kommunikation zwischen anderen Menschen in einem sozialen Netzwerk
+Wie wichtig ist ein Knoten in seinem Netzwerk
+
+.......................................................................
+
+Betweenness misst, wie häufig ein Knoten (Wikipedia-Seite) auf den kürzesten Pfaden zwischen anderen Knoten liegt.
+
+Ein hoher Betweenness-Wert bedeutet: Die Seite fungiert als Vermittler oder "Brücke" im Netzwerk.
+
+Sie ist also für die Navigation oft ein Zwischenschritt, über den viele Wege führen.
+
+Eine Wikipedia-Seite mit hoher Betweenness war im Spiel oft ein Zwischenschritt zwischen Start- und Zielseite.
+
+Sie ist möglicherweise thematisch breit verbunden und dient als Knotenpunkt für viele unterschiedliche Themenbereiche.
+
+
+
+
+```{r Netzwerk Tabellenansicht sortiert nach degree}
+node_metrics_df_sorted_degree <- node_metrics_df %>%
+  arrange(desc(degree))
+
+head(node_metrics_df_sorted_degree, n= 10)
+
+tail(node_metrics_df_sorted_degree, n= 10)
+```
+degree zeigt die Kontakthäufigkeit oder die anzahl der Beziehungen zu anderen Knoten
+
+...................................................................
+
+Der Degree misst, wie viele direkte Verbindungen ein Knoten hat – also wie viele andere Seiten über Kanten mit ihm verbunden sind.
+
+Hier: Wie oft wurde eine Seite als Quelle oder Ziel in einer Kante verwendet (da du später ein ungerichtetes Netzwerk benutzt, zählt beides gleich).
+
+In deinem Kontext:
+Seiten mit hohem Degree sind oft direkt besucht oder von vielen anderen Seiten aus erreicht worden.
+
+Sie sind beliebte Knoten im Navigationsverhalten – entweder, weil sie besonders zentral oder relevant sind.
+
+```{r Netzwerk Tabellenansicht sortiert nach Gewicht}
+edge_df <- as_data_frame(g_filtered, what = "edges")
+
+edge_df_sorted <- edge_df %>%
+  arrange(desc(weight))
+
+head(edge_df_sorted,n= 10)
+
+tail(edge_df_sorted, n= 10)
+
+```
+Die Häufigkeit, mit der eine bestimmte Wikipedia Seite (also der Übergang von einer Wikipedia-Seite zur nächsten) in den Navigationspfaden der Nutzer vorkommt
+
+# Auf Basis der Tabelenwerte erste sachen erklären
+
+
+
 
 ## Hier Fazit und sagen, dass man die ergebnisse besser aus tabelle wie netzwerk lesen kann
-
-
-
-
-
 
 
 
